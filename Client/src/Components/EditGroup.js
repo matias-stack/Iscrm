@@ -1,7 +1,7 @@
 import Form from 'react-bootstrap/Form';
 import React, {Component} from 'react';
 import Box from '@mui/material/Box';
-// import FormLabel from '@mui/material/FormLabel';
+import FormLabel from '@mui/material/FormLabel';
 import FormControl from '@mui/material/FormControl';
 // import FormGroup from '@mui/material/FormGroup';
 // import FormControlLabel from '@mui/material/FormControlLabel';
@@ -16,19 +16,27 @@ import InputLabel from '@mui/material/InputLabel';
 import NativeSelect from '@mui/material/NativeSelect';
 import "../styles/checkbox_style.css";
 
+import { useParams } from "react-router-dom";
+
+function withParams(Component) {
+  return props => <Component {...props} params={useParams()} />;
+}
+
 class EditGroup extends Component {
 
-    constructor(){
-        super();
+    constructor(props){
+        super(props);
         this.state = {
           cursos: [],
-          empleados: [], 
+          empleados: [],
+          res_empleados: [],
           id_cursantes: [],
           id_NO_cursantes:[],
           curso_seleccionado: [],
           cursantes:[],  //dato a la base
           duracion_curso: 0,
-          id_grupo: ''
+          grupos:[],
+          grupo_editar: [],
         }
         this.base = {
             nombre_grupo: 'Gestion TI',
@@ -42,28 +50,18 @@ class EditGroup extends Component {
         this.Obtenercurso = this.Obtenercurso.bind(this)
         this.ActualizarGrupo = this.ActualizarGrupo.bind(this)
         this.Limpiar_todo = this.Limpiar_todo.bind(this)
-        this.llamar_id= this.llamar_id.bind(this)
+        
+        
+        
       }
 
-      llamar_id(id){
-      this.fetchgrupo(id)
-      //   var grupo_editar = grupos.map((item) =>{
-      //   if(id === item._id){
-      //     return item.empleados
-      //   }
-      // })
-      this.setState((e)=>{
-        console.log(e.empleados)
-        })
-      // const empleados_respaldo =this.state.empleados
-      // const restantes = empleados_respaldo.filter((item)=>!(grupo_editar.includes(item)))
-      // this.setState({cursantes:grupo_editar, id_grupo: id, empleados: restantes})
-      console.log(id);
-      }
-      fetchgrupo(id){
-        fetch(`http://localhost:9000/api/grupo/${id}`).then(res => res.json()).then(data => {this.setState({curso_seleccionado:data})})
-      }
+   componentDidMount() {
+    this.obtenerDatos();
+      this.fetchCurso();
       
+      
+    }
+
       checkclick = (e) =>{
         var {id, checked} = e.target;
         if (checked){    
@@ -113,7 +111,6 @@ class EditGroup extends Component {
           e.cursantes = this.ordenar_arreglo(e.cursantes)
         })
       })
-     
    }
 
 
@@ -161,7 +158,7 @@ class EditGroup extends Component {
 
     Obtenercurso(e){
         var {value} = e.target;
-        if (value !== '1'){       
+        if (value !== '1'){    
             this.state.cursos.map((curso)=>{
               if(curso._id === value){
                 this.setState({curso_seleccionado: curso})
@@ -169,27 +166,42 @@ class EditGroup extends Component {
             })
                   }
                   }
-    
-      componentDidMount() {
-        this.fetchCurso();
-        this.fetchEmpleados();
-      }
-      
+     
       Limpiar_todo(e){
-        this.fetchEmpleados()
+        this.obtenerDatos()
         this.setState({cursantes:[], id_cursantes:[],id_NO_cursantes:[], duracion_curso: 0,curso_seleccionado:1})
       }
-      
-      fetchCurso(){fetch('http://localhost:9000/api/curso').then(res => res.json()).then(data => {this.setState({cursos:data});})}
-      
-      fetchEmpleados(){fetch('http://localhost:9000/api/empleado').then(res => res.json()).then((data) => {
-      data = this.ordenar_arreglo(data)
-      this.setState({ empleados: data });})
-    }
+
+      fetchCurso(e){fetch('http://localhost:9000/api/curso').then(res => res.json()).then(data => {this.setState({cursos:data});})}
+
+     async  obtenerDatos(e){
+
+        const datos_empleados = await fetch('http://localhost:9000/api/empleado').
+        then(res => res.json()).
+        then((data) => {
+          data = this.ordenar_arreglo(data)
+          return data
+        })
+        
+        let { id } = this.props.params;
+        const grupo = await fetch(`http://localhost:9000/api/grupo/${id}`)
+        .then(res => res.json())
+        .then(data =>{return data})  
+        const datos_cursantes = grupo.empleados
+        const datos_curso = grupo.curso
+        const id_empleados = datos_cursantes.map((item)=>{return item._id})
+        
+        const restantes = datos_empleados.filter((item)=>!(id_empleados.includes(item._id)))
+        
+        this.setState({empleados:restantes, cursantes: datos_cursantes, curso_seleccionado: datos_curso})
+      }
 
     
+      
 
     ActualizarGrupo(e){
+      console.log("ya estoy aqui")
+      let { id } = this.props.params;
       var today = new Date();
       var day = today.getDate();
       var month = today.getMonth() + 1;
@@ -199,10 +211,10 @@ class EditGroup extends Component {
       this.base.empleados = this.state.cursantes
       this.base.fecha_inicio = `${day}/${month}/${year}`
       this.base.fecha_fin = `${day}/${month+1}/${year}`
-            fetch(`http://localhost:9000/api/grupo/${this.state.id_grupo}`,{
+            fetch(`http://localhost:9000/api/grupo/${id}`,{
               method: 'PUT',                      
               body: JSON.stringify({
-                nombre_grupo: "test",
+                nombre_grupo: "Grupo Actualizado",
                 empleados: this.state.cursantes,
                 curso: this.state.curso_seleccionado,
                 fecha_inicio: this.base.fecha_inicio,
@@ -233,6 +245,7 @@ class EditGroup extends Component {
                     </InputLabel>
                 </div>
             </div>
+          
         {/* -------------------------------- SELECCIONAR CURSO -----------------------------*/}
        <div className="BasicSelect">   
         <Box sx={{ minWidth: 120 }}>
@@ -241,18 +254,23 @@ class EditGroup extends Component {
               Seleccione Cursos Disponibles
             </InputLabel>
             <NativeSelect
-              defaultValue={1}
+            
               inputProps={{
                 name: 'Seleccione Cursos Disponibles',
-                id: 'uncontrolled-native',
+                
               }}
               onChange ={this.Obtenercurso}
+              defaultValue={this.state.curso_seleccionado._id}
               >
-                <option value = {this.curso_seleccionado}>*Seleccione un curso*</option>
+                
+                <option value = {this.state.curso_seleccionado._id}>⮞{this.state.curso_seleccionado['Nombre Curso']}</option>
+                <option value = {1}>*Seleccione Curso*</option>
+                
+
               {
               this.state.cursos.map(elemento => 
                 {
-                  return(<option value = {elemento._id}  >{elemento['Nombre Curso']} </option>)
+                  return(<option value = {elemento._id}  >⮞{elemento['Nombre Curso']}  </option>)
                 }
                 )
                 }
@@ -297,7 +315,7 @@ class EditGroup extends Component {
                         
             <Button onClick={this.ObtenerEmpleadosCursantes} variant="contained">Añadir</Button>
             </div>
-            <b1>Empleados que harán curso de "{this.state.nombre_curso}"</b1>
+            <b1>Empleados que harán curso de "{this.state.curso_seleccionado['Nombre Curso']}"</b1>
             <div className="EliminarEmpleado">
                 <div className="EliminarList">               
                 <Box sx={{ display: 'flex' }}>
@@ -332,7 +350,7 @@ class EditGroup extends Component {
             </div>
             <br></br>
             <div className="BotonFile">
-            <Button onClick ={this.Actualizargrupo} variant="contained">ACTUALIZAR GRUPO</Button>
+            <Button onClick ={this.ActualizarGrupo} variant="contained">ACTUALIZAR GRUPO</Button>
             <Button onClick = {this.Limpiar_todo} variant="contained" color="error" startIcon={<DeleteIcon />}>
                 LIMPIAR TODO
             </Button>           
@@ -340,7 +358,6 @@ class EditGroup extends Component {
         </div>
   );
     }
-  
 }
 
-export default EditGroup;
+export default withParams(EditGroup);

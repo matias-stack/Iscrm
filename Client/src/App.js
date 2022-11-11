@@ -21,7 +21,7 @@ function App() {
           <Route path='/Crear-grupos'  element= {<Creargrupos/>}/>
           <Route path='/verempleados' element={<VerEmpleados/>}/>  
           <Route path='/vergrupos' element={<VerGrupos/>}/>  
-          <Route path='/actualizargrupos' element={<Actualizargrupos/>}/> 
+          <Route path='/actualizargrupos/:id' element={<Actualizargrupos/>}/> 
           <Route path='/monitorear' element={<Monitorear/>}/>  
           <Route path='/cerrarsesion' element={<CerrarSesion/>}/> 
         </Routes>

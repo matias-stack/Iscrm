@@ -18,9 +18,8 @@ class  ViewGroup extends Component{
         }
     }
     editar(id){
-        var edit= new EditGroup()
-        this.props.navigate('../actualizargrupos');
-        edit.llamar_id(id)
+        this.props.navigate(`../actualizargrupos/${id}`);
+        
     }
     componentDidMount(){
         this.fetchGrupos()
